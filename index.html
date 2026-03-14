@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="數字小天才">
+<meta name="theme-color" content="#FF6B6B">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>數字小天才</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, "Noto Sans TC", sans-serif;
+  background: #FFF8F0;
+  min-height: 100vh;
+  padding: 16px;
+}
+
+h1 {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 900;
+  color: #FF6B6B;
+  margin-bottom: 4px;
+}
+.subtitle {
+  text-align: center;
+  color: #aaa;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+/* TABS */
+.tabs {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.tab {
+  padding: 10px 28px;
+  border-radius: 50px;
+  border: none;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #eee;
+  color: #888;
+}
+.tab.on { background: #FF6B6B; color: white; }
+
+/* SCORE */
+.score-bar {
+  text-align: center;
+  margin-bottom: 16px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #555;
+}
+
+/* ===== LEARN MODE ===== */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.card {
+  border-radius: 14px;
+  padding: 10px 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  color: white;
+  min-height: 70px;
+}
+.card:active { opacity: 0.7; }
+.card, .choice, .choice-sm {
+  touch-action: manipulation;
+}
+.card-num { font-size: 28px; font-weight: 900; line-height: 1; }
+.card-zh  { font-size: 13px; font-weight: 700; margin-top: 2px; }
+
+.info-box {
+  background: white;
+  border-radius: 18px;
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+  min-height: 110px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.big-num { font-size: 60px; font-weight: 900; line-height: 1; }
+.big-zh  { font-size: 22px; font-weight: 700; color: #888; margin-top: 4px; }
+.dots    { font-size: 26px; margin-top: 10px; line-height: 1.6; word-break: break-all; }
+.hint    { color: #ccc; font-size: 15px; }
+
+/* ===== QUIZ MODE ===== */
+.quiz-box {
+  background: white;
+  border-radius: 18px;
+  padding: 20px 14px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+}
+.q-text {
+  font-size: 19px;
+  font-weight: 700;
+  color: #333;
+  text-align: center;
+  margin-bottom: 6px;
+}
+.q-big {
+  font-size: 48px;
+  text-align: center;
+  line-height: 1.3;
+  margin-bottom: 16px;
+  word-break: break-all;
+}
+
+/* 4 choices */
+.choices-4 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.choice {
+  border-radius: 12px;
+  border: none;
+  padding: 16px 8px;
+  font-size: 26px;
+  font-weight: 900;
+  color: white;
+  cursor: pointer;
+  min-height: 64px;
+}
+.choice:active { opacity: 0.7; }
+
+/* 10 choices for counting */
+.choices-10 {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.choice-sm {
+  border-radius: 10px;
+  border: none;
+  padding: 12px 2px;
+  font-size: 20px;
+  font-weight: 900;
+  color: white;
+  cursor: pointer;
+  min-height: 52px;
+}
+.choice-sm:active { opacity: 0.7; }
+
+.result {
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  min-height: 28px;
+  margin-bottom: 12px;
+}
+.next-btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  border-radius: 50px;
+  border: none;
+  background: #54A0FF;
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<h1>🌟 數字小天才 🌟</h1>
+<p class="subtitle">點擊數字，學習 1 到 10！</p>
+
+<div class="tabs">
+  <button class="tab on" id="tabLearn" onclick="showLearn()">📚 認識數字</button>
+  <button class="tab"    id="tabQuiz"  onclick="showQuiz()">🎯 小測驗</button>
+</div>
+
+<div class="score-bar">⭐ 得分：<span id="score">0</span></div>
+
+<!-- LEARN -->
+<div id="learnMode">
+  <div class="grid" id="grid"></div>
+  <div class="info-box" id="infoBox"><p class="hint">👆 點上面的數字！</p></div>
+</div>
+
+<!-- QUIZ -->
+<div id="quizMode" style="display:none">
+  <div class="quiz-box">
+    <div class="q-text" id="qText"></div>
+    <div class="q-big"  id="qBig"></div>
+    <div id="choicesArea"></div>
+    <div class="result" id="result"></div>
+    <button class="next-btn" id="nextBtn" onclick="loadQ()" style="display:none">下一題 ➡️</button>
+  </div>
+</div>
+
+<script>
+var nums = [
+  {n:1,  zh:'一', e:'🍎', c:'#FF6B6B'},
+  {n:2,  zh:'二', e:'🍊', c:'#FF9F43'},
+  {n:3,  zh:'三', e:'🌟', c:'#FECA57'},
+  {n:4,  zh:'四', e:'🦋', c:'#48DBFB'},
+  {n:5,  zh:'五', e:'🌈', c:'#FF9FF3'},
+  {n:6,  zh:'六', e:'🐸', c:'#54A0FF'},
+  {n:7,  zh:'七', e:'🦄', c:'#5F27CD'},
+  {n:8,  zh:'八', e:'🐙', c:'#00D2D3'},
+  {n:9,  zh:'九', e:'🌺', c:'#1DD1A1'},
+  {n:10, zh:'十', e:'🎉', c:'#EE5A24'}
+];
+
+var score = 0;
+var answered = false;
+var correctN = 0;
+var qStyle = 0;
+
+// Build learn grid
+var grid = document.getElementById('grid');
+for(var gi = 0; gi < nums.length; gi++) {
+  (function(item) {
+    var btn = document.createElement('button');
+    btn.className = 'card';
+    btn.style.background = item.c;
+    btn.innerHTML = '<span class="card-num" style="pointer-events:none">' + item.n + '</span><span class="card-zh" style="pointer-events:none">' + item.zh + '</span>';
+    var touched = false;
+    btn.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      touched = true;
+      selectNum(item);
+      setTimeout(function(){ touched = false; }, 500);
+    });
+    btn.addEventListener('click', function(e) {
+      if(touched) return;
+      selectNum(item);
+    });
+    grid.appendChild(btn);
+  })(nums[gi]);
+}
+
+// 產生逼真 SVG 手掌，n 根手指豎起（使用漸層+貝茲曲線）
+function handSVG(n) {
+  // 手指參數：[cx, 收起時底部y, 豎起時頂部y, 寬, 指節位置比例]
+  var F = [
+    {cx:22, baseY:82, tipY:18, w:13, knuckle1:0.35, knuckle2:0.65}, // 拇指（稍斜）
+    {cx:37, baseY:78, tipY:10, w:14, knuckle1:0.33, knuckle2:0.62}, // 食指
+    {cx:52, baseY:76, tipY:6,  w:14, knuckle1:0.33, knuckle2:0.62}, // 中指（最長）
+    {cx:67, baseY:78, tipY:11, w:13, knuckle1:0.35, knuckle2:0.64}, // 無名指
+    {cx:82, baseY:82, tipY:20, w:11, knuckle1:0.38, knuckle2:0.66}  // 小指
+  ];
+  var skinLight = '#FDDBB4';
+  var skin      = '#F5C28A';
+  var skinDark  = '#E8A85F';
+  var lineC     = '#C8854A';
+  var W = 104, H = 130;
+
+  var svg = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H +
+    '" xmlns="http://www.w3.org/2000/svg">';
+
+  // 定義漸層
+  svg += '<defs>' +
+    '<linearGradient id="palmG" x1="0" y1="0" x2="1" y2="1">' +
+    '<stop offset="0%" stop-color="' + skinLight + '"/>' +
+    '<stop offset="100%" stop-color="' + skinDark + '"/>' +
+    '</linearGradient>' +
+    '<linearGradient id="fingerG" x1="0" y1="0" x2="1" y2="0">' +
+    '<stop offset="0%" stop-color="' + skinLight + '"/>' +
+    '<stop offset="50%" stop-color="' + skin + '"/>' +
+    '<stop offset="100%" stop-color="' + skinDark + '"/>' +
+    '</linearGradient>' +
+    '</defs>';
+
+  // 先畫收起的手指（在手掌下面）
+  for(var i = 0; i < 5; i++) {
+    var f = F[i];
+    var up = (i < n);
+    if(!up) {
+      var fTop = f.baseY - 16;
+      var fH   = 20;
+      var hw   = f.w / 2;
+      svg += '<path d="M' + (f.cx-hw) + ',' + (fTop+fH) +
+        ' Q' + (f.cx-hw) + ',' + fTop + ' ' + f.cx + ',' + (fTop-2) +
+        ' Q' + (f.cx+hw) + ',' + fTop + ' ' + (f.cx+hw) + ',' + (fTop+fH) + ' Z"' +
+        ' fill="url(#fingerG)" stroke="' + lineC + '" stroke-width="1"/>';
+    }
+  }
+
+  // 手掌（圓角梯形用 path）
+  svg += '<path d="M14,88 Q10,78 12,72 L14,65 Q15,60 22,60 L82,60 Q89,60 90,65 L92,72 Q94,78 90,88 Q88,110 85,118 Q82,124 52,124 Q22,124 19,118 Q16,110 14,88 Z"' +
+    ' fill="url(#palmG)" stroke="' + lineC + '" stroke-width="1.5"/>';
+
+  // 手掌紋路
+  svg += '<path d="M20,88 Q40,84 84,88" fill="none" stroke="' + lineC + '" stroke-width="0.8" opacity="0.4"/>';
+  svg += '<path d="M18,98 Q40,94 86,98" fill="none" stroke="' + lineC + '" stroke-width="0.8" opacity="0.3"/>';
+
+  // 豎起的手指
+  for(var i = 0; i < 5; i++) {
+    var f = F[i];
+    var up = (i < n);
+    if(up) {
+      var hw  = f.w / 2;
+      var fH  = f.baseY - f.tipY;
+      var k1y = f.tipY + fH * f.knuckle1;
+      var k2y = f.tipY + fH * f.knuckle2;
+
+      // 手指主體（用 path 做微弧）
+      svg += '<path d="M' + (f.cx-hw+1) + ',' + f.baseY +
+        ' Q' + (f.cx-hw) + ',' + (f.tipY+8) + ' ' + f.cx + ',' + f.tipY +
+        ' Q' + (f.cx+hw) + ',' + (f.tipY+8) + ' ' + (f.cx+hw-1) + ',' + f.baseY + ' Z"' +
+        ' fill="url(#fingerG)" stroke="' + lineC + '" stroke-width="1.2"/>';
+
+      // 指節橫紋
+      svg += '<line x1="' + (f.cx-hw+2) + '" y1="' + k1y + '" x2="' + (f.cx+hw-2) + '" y2="' + k1y +
+        '" stroke="' + lineC + '" stroke-width="0.9" opacity="0.5"/>';
+      svg += '<line x1="' + (f.cx-hw+2) + '" y1="' + k2y + '" x2="' + (f.cx+hw-2) + '" y2="' + k2y +
+        '" stroke="' + lineC + '" stroke-width="0.9" opacity="0.5"/>';
+
+      // 指尖高光
+      svg += '<ellipse cx="' + f.cx + '" cy="' + (f.tipY+6) + '" rx="' + (hw*0.45) + '" ry="3"' +
+        ' fill="white" opacity="0.25"/>';
+    }
+  }
+
+  svg += '</svg>';
+  return svg;
+}
+
+// 手指對照表（認識數字模式用的 emoji）
+var hands = {
+  1:  ['☝️'],
+  2:  ['✌️'],
+  3:  ['🤞'],
+  4:  ['🖖'],
+  5:  ['🖐️'],
+  6:  ['🖐️','☝️'],
+  7:  ['🖐️','✌️'],
+  8:  ['🖐️','🤞'],
+  9:  ['🖐️','🖖'],
+  10: ['🖐️','🖐️']
+};
+
+function selectNum(item) {
+  // 手勢 SVG
+  var svgHtml = '<div style="display:flex;gap:8px;justify-content:center;align-items:flex-end;margin-top:8px">';
+  if(item.n <= 5) {
+    svgHtml += handSVG(item.n);
+  } else {
+    svgHtml += handSVG(5) + handSVG(item.n - 5);
+  }
+  svgHtml += '</div>';
+
+  // 水果排列（每排5個換行）
+  var fruits = '';
+  for(var i = 0; i < item.n; i++) {
+    if(i > 0 && i % 5 === 0) fruits += '<br>';
+    fruits += '<span style="font-size:32px">' + item.e + '</span>';
+  }
+  var fruitsHtml = '<div style="text-align:center;margin-top:10px;line-height:1.4">' + fruits + '</div>';
+
+  document.getElementById('infoBox').innerHTML =
+    '<div class="big-num" style="color:' + item.c + '">' + item.n + '</div>' +
+    '<div class="big-zh">' + item.zh + '</div>' +
+    fruitsHtml +
+    svgHtml;
+  say(item.n + ' ' + item.zh);
+}
+
+function showLearn() {
+  document.getElementById('learnMode').style.display = 'block';
+  document.getElementById('quizMode').style.display  = 'none';
+  document.getElementById('tabLearn').className = 'tab on';
+  document.getElementById('tabQuiz').className  = 'tab';
+}
+
+function showQuiz() {
+  document.getElementById('learnMode').style.display = 'none';
+  document.getElementById('quizMode').style.display  = 'block';
+  document.getElementById('tabLearn').className = 'tab';
+  document.getElementById('tabQuiz').className  = 'tab on';
+  loadQ();
+}
+
+function loadQ() {
+  answered = false;
+  document.getElementById('result').textContent = '';
+  document.getElementById('nextBtn').style.display = 'none';
+
+  var item = nums[Math.floor(Math.random() * 10)];
+  correctN = item.n;
+  qStyle = Math.floor(Math.random() * 4);
+
+  if(qStyle === 0) {
+    // 看國字，選阿拉伯數字 - 顯示對應數量的表情
+    var emojis0 = '';
+    for(var i = 0; i < item.n; i++) emojis0 += item.e + ' ';
+    document.getElementById('qText').textContent = '下面哪個是「' + item.zh + '」？';
+    document.getElementById('qBig').innerHTML = '<span style="font-size:36px;line-height:1.6;word-break:break-all">' + emojis0 + '</span>';
+    say('下面哪個是' + item.zh);
+    build4(item, false);
+  } else if(qStyle === 1) {
+    // 數數看：顯示表情符號，點手指數到正確數目
+    var emojis = '';
+    for(var i = 0; i < item.n; i++) emojis += item.e + ' ';
+    document.getElementById('qText').textContent = '數數看！有幾個？點手指回答';
+    document.getElementById('qBig').innerHTML = '<span style="font-size:36px;line-height:1.6;word-break:break-all">' + emojis + '</span>';
+    say('數數看！有幾個？點手指回答');
+    buildTapCount(item);
+  } else if(qStyle === 2) {
+    // 看數字，選國字 - 旁邊加手勢
+    var svgHand2 = item.n <= 5 ? handSVG(item.n) : handSVG(5) + handSVG(item.n - 5);
+    document.getElementById('qText').textContent = '這個數字怎麼唸？';
+    document.getElementById('qBig').innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:center;gap:16px">' +
+      '<span style="color:' + item.c + ';font-weight:900;font-size:72px;line-height:1">' + item.n + '</span>' +
+      '<div style="display:flex;gap:4px;align-items:flex-end">' + svgHand2 + '</div>' +
+      '</div>';
+    say('這個數字怎麼唸？');
+    build4(item, true);
+  } else {
+    // 看手指手勢，選數字
+    var svgHtml = '<div style="display:flex;gap:8px;justify-content:center;align-items:flex-end">';
+    if(item.n <= 5) {
+      svgHtml += handSVG(item.n);
+    } else {
+      svgHtml += handSVG(5) + handSVG(item.n - 5);
+    }
+    svgHtml += '</div>';
+    document.getElementById('qText').textContent = '這個手勢是數字幾？';
+    document.getElementById('qBig').innerHTML = svgHtml;
+    say('這個手勢是數字幾？');
+    build4(item, false);
+  }
+}
+
+function build4(item, showZh) {
+  var pool = [];
+  for(var i = 0; i < nums.length; i++) {
+    if(nums[i].n !== item.n) pool.push(nums[i]);
+  }
+  shuffle(pool);
+  var choices = shuffle([item, pool[0], pool[1], pool[2]]);
+
+  var area = document.getElementById('choicesArea');
+  area.innerHTML = '';
+  var div = document.createElement('div');
+  div.className = 'choices-4';
+  for(var j = 0; j < choices.length; j++) {
+    (function(ch) {
+      var btn = document.createElement('button');
+      btn.className = 'choice';
+      btn.style.background = ch.c;
+      btn.setAttribute('data-n', ch.n);
+      btn.textContent = showZh ? ch.zh : ch.n;
+      btn.onclick = function() { check(ch.n, btn); };
+      div.appendChild(btn);
+    })(choices[j]);
+  }
+  area.appendChild(div);
+}
+
+function buildTapCount(item) {
+  var tapCount = 0;
+  var area = document.getElementById('choicesArea');
+  area.innerHTML = '';
+
+  // 把表情符號從 qBig 移掉，改在 choicesArea 裡顯示可點擊的個別表情
+  document.getElementById('qBig').textContent = '';
+
+  // 計數顯示
+  var countLabel = document.createElement('div');
+  countLabel.style.cssText = 'text-align:center;font-size:32px;font-weight:900;color:' + item.c + ';margin-bottom:12px';
+  countLabel.id = 'countLabel';
+  countLabel.textContent = '已數：0';
+  area.appendChild(countLabel);
+
+  // 可點擊的表情格子
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-bottom:16px';
+
+  for(var i = 0; i < item.n; i++) {
+    (function(idx) {
+      var span = document.createElement('button');
+      span.style.cssText = 'font-size:48px;background:none;border:3px solid transparent;' +
+        'border-radius:12px;padding:4px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:all 0.15s';
+      span.textContent = item.e;
+      span.setAttribute('data-idx', idx);
+      span.setAttribute('data-tapped', '0');
+      span.onclick = function() {
+        if(answered) return;
+        if(span.getAttribute('data-tapped') === '1') return;
+        span.setAttribute('data-tapped', '1');
+        span.style.filter = 'grayscale(1) opacity(0.4)';
+        span.style.borderColor = item.c;
+        span.style.transform = 'scale(0.85)';
+        tapCount++;
+        document.getElementById('countLabel').textContent = '已數：' + tapCount;
+        if(tapCount === correctN) {
+          answered = true;
+          document.getElementById('result').innerHTML = '<span style="color:#2ecc71">✅ 答對了！是 ' + correctN + ' 個！🎉</span>';
+          score += 10;
+          document.getElementById('score').textContent = score;
+          burst(span);
+          document.getElementById('nextBtn').style.display = 'block';
+          speakThen(String(tapCount), '答對了！是' + nums[correctN-1].zh + '！');
+          checkMilestone(score);
+        } else {
+          say(String(tapCount));
+        }
+      };
+      grid.appendChild(span);
+    })(i);
+  }
+  area.appendChild(grid);
+
+  // 重設按鈕
+  var resetBtn = document.createElement('button');
+  resetBtn.style.cssText = 'display:block;width:100%;padding:12px;border-radius:16px;border:none;' +
+    'background:#ddd;color:#888;font-size:16px;font-weight:700;cursor:pointer;touch-action:manipulation';
+  resetBtn.textContent = '🔄 重新數';
+  resetBtn.onclick = function() {
+    if(answered) return;
+    tapCount = 0;
+    document.getElementById('countLabel').textContent = '已數：0';
+    var btns = grid.querySelectorAll('button');
+    for(var i = 0; i < btns.length; i++) {
+      btns[i].setAttribute('data-tapped', '0');
+      btns[i].style.filter = '';
+      btns[i].style.borderColor = 'transparent';
+      btns[i].style.transform = '';
+    }
+  };
+  area.appendChild(resetBtn);
+}
+
+function check(chosen, btn) {
+  if(answered) return;
+  answered = true;
+
+  if(chosen === correctN) {
+    btn.style.outline = '4px solid #2ecc71';
+    document.getElementById('result').innerHTML = '<span style="color:#2ecc71">✅ 答對了！太棒了！🎉</span>';
+    score += 10;
+    document.getElementById('score').textContent = score;
+    say('答對了！太棒了！');
+    burst(btn);
+    checkMilestone(score);
+  } else {
+    btn.style.opacity = '0.4';
+    var all = document.querySelectorAll('[data-n]');
+    for(var i = 0; i < all.length; i++) {
+      if(parseInt(all[i].getAttribute('data-n')) === correctN) {
+        all[i].style.outline = '4px solid #2ecc71';
+      }
+    }
+    var zhAns = '';
+    for(var k = 0; k < nums.length; k++) {
+      if(nums[k].n === correctN) { zhAns = nums[k].zh; break; }
+    }
+    document.getElementById('result').innerHTML = '<span style="color:#e74c3c">❌ 答錯了！正確是「' + correctN + ' ' + zhAns + '」</span>';
+    say('答錯了！正確答案是' + zhAns);
+  }
+  document.getElementById('nextBtn').style.display = 'block';
+}
+
+// 記錄是否剛發生 touch，避免 click 重複觸發
+window._lastTouch = false;
+document.addEventListener('touchstart', function() {
+  window._lastTouch = true;
+  setTimeout(function(){ window._lastTouch = false; }, 500);
+});
+
+var sayTimer = null;
+function say(text) {
+  if(!window.speechSynthesis) return;
+  clearTimeout(sayTimer);
+  window.speechSynthesis.cancel();
+  sayTimer = setTimeout(function() {
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = 'zh-TW'; u.rate = 0.9; u.pitch = 1.1;
+    window.speechSynthesis.speak(u);
+  }, 50);
+}
+// 數數看用：先說數字，說完再說下一句
+function speakThen(first, second) {
+  if(!window.speechSynthesis) return;
+  clearTimeout(sayTimer);
+  window.speechSynthesis.cancel();
+  var u1 = new SpeechSynthesisUtterance(first);
+  u1.lang = 'zh-TW'; u1.rate = 0.9; u1.pitch = 1.1;
+  if(second) {
+    u1.onend = function() {
+      var u2 = new SpeechSynthesisUtterance(second);
+      u2.lang = 'zh-TW'; u2.rate = 0.9; u2.pitch = 1.1;
+      window.speechSynthesis.speak(u2);
+    };
+  }
+  window.speechSynthesis.speak(u1);
+}
+
+function checkMilestone(newScore) {
+  if(newScore > 0 && newScore % 100 === 0) {
+    setTimeout(function() { celebrate(newScore); }, 300);
+  }
+}
+
+function celebrate(pts) {
+  say('哇！得了' + pts + '分！好棒！');
+  var colors = ['#FF6B6B','#FF9F43','#FECA57','#48DBFB','#FF9FF3','#54A0FF','#1DD1A1','#EE5A24'];
+  var shapes = ['50%', '0%', '0%', '50%'];
+  // 大量彩帶從畫面各處爆出
+  for(var i = 0; i < 80; i++) {
+    (function(idx) {
+      var c = document.createElement('div');
+      var startX = Math.random() * window.innerWidth;
+      var startY = window.innerHeight * 0.4 + Math.random() * window.innerHeight * 0.2;
+      var angle = (Math.random() * 360);
+      var dist = 150 + Math.random() * 250;
+      var rad = angle * Math.PI / 180;
+      var endX = startX + Math.cos(rad) * dist;
+      var endY = startY + Math.sin(rad) * dist;
+      var size = 8 + Math.random() * 10;
+      c.style.cssText = 'position:fixed;pointer-events:none;z-index:9999;' +
+        'width:' + size + 'px;height:' + (size * (0.4 + Math.random()*0.8)) + 'px;' +
+        'left:' + startX + 'px;top:' + startY + 'px;' +
+        'background:' + colors[idx % colors.length] + ';' +
+        'border-radius:' + shapes[idx % shapes.length] + ';' +
+        'transition:transform ' + (0.8 + Math.random()*0.6) + 's cubic-bezier(0.25,0.46,0.45,0.94),opacity 0.4s ease ' + (0.6+Math.random()*0.4) + 's';
+      document.body.appendChild(c);
+      setTimeout(function() {
+        c.style.transform = 'translate(' + (endX-startX) + 'px,' + (endY-startY) + 'px) rotate(' + (Math.random()*720) + 'deg) scale(0.3)';
+        c.style.opacity = '0';
+      }, 30 + idx * 8);
+      setTimeout(function() { c.remove(); }, 2500);
+    })(i);
+  }
+  // 中間顯示大字慶祝
+  var banner = document.createElement('div');
+  banner.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);' +
+    'z-index:10000;background:white;border-radius:24px;padding:24px 36px;text-align:center;' +
+    'box-shadow:0 10px 40px rgba(0,0,0,0.2);transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1)';
+  banner.innerHTML = '<div style="font-size:52px">🎉</div>' +
+    '<div style="font-size:32px;font-weight:900;color:#FF6B6B">' + pts + ' 分！</div>' +
+    '<div style="font-size:18px;color:#888;margin-top:4px">超級厲害！</div>';
+  document.body.appendChild(banner);
+  setTimeout(function() { banner.style.transform = 'translate(-50%,-50%) scale(1)'; }, 50);
+  setTimeout(function() {
+    banner.style.transform = 'translate(-50%,-50%) scale(0)';
+    setTimeout(function() { banner.remove(); }, 400);
+  }, 2200);
+}
+
+function burst(el) {
+  var colors = ['#FF6B6B','#FF9F43','#FECA57','#48DBFB','#1DD1A1'];
+  var rect = el.getBoundingClientRect();
+  for(var i = 0; i < 14; i++) {
+    (function() {
+      var c = document.createElement('div');
+      var dx = (Math.random() - 0.5) * 100;
+      c.style.cssText = 'position:fixed;width:10px;height:10px;border-radius:50%;pointer-events:none;z-index:999;' +
+        'left:' + (rect.left + rect.width/2 + dx) + 'px;' +
+        'top:' + (rect.top + rect.height/2) + 'px;' +
+        'background:' + colors[Math.floor(Math.random()*5)] + ';' +
+        'transition:transform 0.8s ease,opacity 0.8s ease';
+      document.body.appendChild(c);
+      setTimeout(function() {
+        c.style.transform = 'translateY(-' + (60 + Math.random()*80) + 'px) scale(0)';
+        c.style.opacity = '0';
+      }, 20);
+      setTimeout(function() { c.remove(); }, 900);
+    })();
+  }
+}
+
+function shuffle(arr) {
+  for(var i = arr.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+  }
+  return arr;
+}
+
+// 註冊 Service Worker
+if('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js');
+  });
+}
+</script>
+</body>
+</html>
