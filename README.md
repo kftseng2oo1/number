@@ -16,5 +16,3 @@
 - `speechSynthesis` 念中文與英文
 - 不儲存資料
 
-## 備註
-- `number-learning.html` 與 `index.html` 內容完全相同，可刪除其一。
